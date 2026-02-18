@@ -89,10 +89,8 @@ The only thing left to do was to kill the transaction and watch our CPU burn whi
 
 Of course a stuck transaction can bring several unwanted side effects on top of this — a held connection slot, lock contention on any rows it touched, and WAL retention preventing disk cleanup — so I urge anyone having a doubt to check and why not monitor this query for long-lasting transactions.
 
-Or if you don't want to have to worry about this, set your pg database to automatically timeout transactions after a certain idle time:
+## Would a proper idle_in_transaction_session_timeout setting prevent this issue?
 
-```sql
-ALTER DATABASE your_db SET idle_in_transaction_session_timeout = '1h';
-```
+[`idle_in_transaction_session_timeout`](https://postgresqlco.nf/doc/en/param/idle_in_transaction_session_timeout/) terminates sessions that have been idle within an open transaction for too long. In this specific case, the transaction was in `active` state — a query was still running — so this setting had no effect, even though we had it configured to 1h.
 
-And if you want to catch runaway queries before they become a problem, [`statement_timeout`](https://postgresqlco.nf/doc/en/param/statement_timeout/) is your friend — it won't save you from a zombie transaction but it will kill the query that started it.
+The combination of [`statement_timeout`](https://postgresqlco.nf/doc/en/param/statement_timeout/) and `idle_in_transaction_session_timeout` would have handled it: `statement_timeout` kills the running query, which transitions the transaction to `idle in transaction (aborted)` — at which point `idle_in_transaction_session_timeout` kicks in and terminates the connection.
