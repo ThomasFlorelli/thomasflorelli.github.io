@@ -61,11 +61,6 @@ SELECT
 FROM pg_replication_slots;
 ```
 
-| slot_name | slot_type | active | xmin_age | lag |
-| --------- | --------- | ------ | -------- | --- |
-
-Whole bunch of emptiness here.
-
 ### But after checking running transactions, there was very little doubt left
 
 ```sql
