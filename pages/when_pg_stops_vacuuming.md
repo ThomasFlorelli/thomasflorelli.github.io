@@ -3,7 +3,7 @@
 You can spend a lifetime storing and accessing things in PgSQL databases without thinking too much about why and how pg vacuums dead tuples for you — the obsolete row versions left behind after every UPDATE or DELETE, which PostgreSQL keeps around rather than erasing immediately in order to support concurrent transactions (MVCC).
 At least that's what I did until a weird growing issue happened at Seyna. For weeks I had been hearing team members saying that the more we delivered features, the slower the application became, at a worrying rate. We tried to identify and fix some of the slowest queries that we knew were not optimal but didn't think they would start biting so fast. The complaints were still there and waiting times kept growing until Sentry signaled a simple count query taking up to 2 minutes on our largest database. By using an EXPLAIN query I made sure that the query was using the intended indexes so it came down to a simple question: why is the index not helping?
 
-I found this article that explains everything there is to know on the topic and confirmed in my head that this should be our main concern: https://rogerwelin.github.io/2026/02/11/postgresql-bloat-is-a-feature-not-a-bug/
+I found this article that explains everything there is to know on the topic and confirmed in my head that this should be our main concern: [PostgreSQL bloat is a feature, not a bug](https://rogerwelin.github.io/2026/02/11/postgresql-bloat-is-a-feature-not-a-bug/)
 
 I now knew that something was wrong with our dead tuples tricking pg into scanning dozens of millions of irrelevant keys.
 
