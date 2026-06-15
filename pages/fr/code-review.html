@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guide de Review de code — pour développeurs</title>
+<style>
+  :root {
+    --ink: #14161a;
+    --paper: #f6f4ef;
+    --paper-deep: #ece8df;
+    --line: #d6d0c4;
+    --added: #2f6f4f;
+    --added-bg: #e3f0e8;
+    --removed: #9a3b3b;
+    --removed-bg: #f3e2e0;
+    --accent: #c4533a;
+    --accent-deep: #8f3522;
+    --muted: #6b6457;
+    --code-bg: #1c1f24;
+    --code-ink: #e6e4dd;
+    --diff-gutter: #2a2e35;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Charter', 'Georgia', 'Iowan Old Style', serif;
+    line-height: 1.6;
+    font-size: 18px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono {
+    font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, 'Cascadia Code', monospace;
+  }
+
+  /* ---- Layout ---- */
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 28px; }
+
+  /* ---- Header / Hero ---- */
+  header {
+    border-bottom: 2px solid var(--ink);
+    background: var(--paper);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero {
+    padding: 72px 0 56px;
+    position: relative;
+  }
+  .eyebrow {
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+    margin-bottom: 22px;
+  }
+  h1 {
+    font-size: clamp(38px, 7vw, 66px);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+    margin-bottom: 24px;
+  }
+  h1 .strike {
+    color: var(--muted);
+  }
+  .hero p.lede {
+    font-size: 21px;
+    max-width: 600px;
+    color: #33312c;
+  }
+  /* a faux-diff strip as the hero signature */
+  .difftease {
+    margin-top: 40px;
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .difftease .row { display: flex; align-items: stretch; }
+  .difftease .gutter {
+    width: 30px; text-align: center; color: #aaa;
+    user-select: none; padding: 3px 0; flex-shrink: 0;
+    border-right: 1px solid var(--line);
+  }
+  .difftease .content { padding: 3px 14px; white-space: pre; flex: 1; }
+  .difftease .add { background: var(--added-bg); color: var(--added); }
+  .difftease .add .gutter { background: var(--added-bg); color: var(--added); }
+  .difftease .rem { background: var(--removed-bg); color: var(--removed); }
+  .difftease .rem .gutter { background: var(--removed-bg); color: var(--removed); }
+  .difftease .ctx { color: #555; }
+
+  /* ---- Nav ---- */
+  nav.toc {
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-deep);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  nav.toc .wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 26px;
+    padding-top: 14px; padding-bottom: 14px;
+  }
+  nav.toc a {
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    padding-bottom: 2px;
+    transition: color .15s, border-color .15s;
+  }
+  nav.toc a:hover { color: var(--accent-deep); border-color: var(--accent); }
+
+  /* ---- Sections ---- */
+  section { padding: 64px 0; border-bottom: 1px solid var(--line); }
+  .sec-head { display: flex; align-items: baseline; gap: 18px; margin-bottom: 28px; }
+  .sec-num {
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+    flex-shrink: 0;
+    padding-top: 6px;
+  }
+  h2 {
+    font-size: clamp(28px, 4.4vw, 40px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    font-weight: 600;
+  }
+  h3 {
+    font-size: 22px;
+    margin: 36px 0 12px;
+    letter-spacing: -0.01em;
+  }
+  p { margin-bottom: 16px; }
+  .muted { color: var(--muted); }
+  strong { font-weight: 600; }
+  a.inline { color: var(--accent-deep); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+  /* ---- Step list ---- */
+  .steps { list-style: none; counter-reset: step; margin-top: 16px; }
+  .steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 22px 0 22px 64px;
+    border-top: 1px solid var(--line);
+  }
+  .steps > li::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute;
+    left: 0; top: 22px;
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 14px;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .steps h3 { margin-top: 0; }
+  .steps .why {
+    font-size: 15.5px;
+    color: var(--muted);
+    margin-top: 8px;
+    border-left: 2px solid var(--line);
+    padding-left: 14px;
+  }
+
+  /* ---- Callout ---- */
+  .callout {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    padding: 18px 22px;
+    margin: 24px 0;
+  }
+  .callout .tag {
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--accent-deep); display: block; margin-bottom: 6px;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ---- Code blocks ---- */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border-radius: 8px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 18px 0;
+  }
+  pre .c { color: #8a8f98; }
+  pre .k { color: #d9a05b; }
+  code.ic {
+    font-family: 'SF Mono', ui-monospace, monospace;
+    font-size: 0.86em;
+    background: var(--paper-deep);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+
+  /* ---- Two col cards ---- */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 22px 0; }
+  .card {
+    background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px;
+  }
+  .card h4 { font-size: 17px; margin-bottom: 8px; }
+  .card.good { border-top: 3px solid var(--added); }
+  .card.bad { border-top: 3px solid var(--removed); }
+  .card .lbl { font-family:'SF Mono',ui-monospace,monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; margin-bottom:10px; display:block;}
+  .card.good .lbl { color: var(--added); }
+  .card.bad .lbl { color: var(--removed); }
+  .card p { font-size: 15.5px; margin-bottom: 8px; }
+  .card p:last-child { margin-bottom: 0; }
+
+  /* ---- Checklist ---- */
+  .checklist { list-style: none; margin: 18px 0; }
+  .checklist li {
+    padding: 10px 0 10px 34px; position: relative; border-bottom: 1px dashed var(--line);
+    font-size: 16.5px;
+  }
+  .checklist li::before {
+    content: "›"; position: absolute; left: 6px; top: 9px;
+    font-family:'SF Mono',monospace; color: var(--accent); font-size: 18px;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist .ax { font-family:'SF Mono',ui-monospace,monospace; font-size:12px; color: var(--muted); display:block; margin-top:2px; }
+
+  /* ---- Priority ladder ---- */
+  .ladder { margin: 24px 0; }
+  .ladder .rung {
+    display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 6px;
+    margin-bottom: 8px; overflow: hidden; background:#fff;
+  }
+  .ladder .rank {
+    width: 56px; flex-shrink: 0; display:flex; align-items:center; justify-content:center;
+    font-family:'SF Mono',monospace; font-weight:600; font-size:15px; color:#fff;
+  }
+  .ladder .rung-body { padding: 14px 18px; }
+  .ladder .rung-body h4 { font-size: 16px; margin-bottom: 3px; }
+  .ladder .rung-body p { font-size: 14.5px; margin:0; color: var(--muted); }
+  .r1 { background:#b23a2e; } .r2 { background:#c4533a; } .r3 { background:#cf8a3f; }
+  .r4 { background:#8a9a5b; } .r5 { background:#6b8e7a; }
+
+  /* ---- footer ---- */
+  footer { padding: 56px 0 80px; text-align: center; }
+  footer .mono { font-size: 13px; color: var(--muted); letter-spacing: 0.04em; }
+  footer .rule { width: 60px; height: 2px; background: var(--accent); margin: 0 auto 28px; }
+
+  @media (max-width: 640px) {
+    body { font-size: 17px; }
+    .grid { grid-template-columns: 1fr; }
+    .steps > li { padding-left: 0; padding-top: 56px; }
+    .steps > li::before { top: 14px; }
+    nav.toc .wrap { gap: 4px 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hero">
+    <div class="eyebrow">Pratique du code review · git + github</div>
+    <h1>Lire le code<br>des autres,<br><span class="strike">comme on lit le sien.</span></h1>
+    <p class="lede">Un guide pour le développeur qui veut transformer la review de PR d'une formalité fatigante en un acte d'ingénierie à forte valeur — et muscler au passage sa propre capacité d'analyse.</p>
+
+    <div class="difftease" aria-hidden="true">
+      <div class="row rem"><span class="gutter">-</span><span class="content">if (user.role == "admin") grantAccess();</span></div>
+      <div class="row add"><span class="gutter">+</span><span class="content">if (user.hasPermission(Permission.ADMIN)) grantAccess();</span></div>
+      <div class="row ctx"><span class="gutter"> </span><span class="content">// review : « pourquoi un rôle et pas une permission ? »</span></div>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <div class="wrap">
+    <a href="#mindset">Le bon état d'esprit</a>
+    <a href="#process">Le process pas-à-pas</a>
+    <a href="#priorites">Échelle de priorités</a>
+    <a href="#outils">Outils &amp; méthodo git/github</a>
+    <a href="#cognition">Affûter l'analyse</a>
+    <a href="#communication">Communiquer un retour</a>
+    <a href="#checklist">Checklist</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="mindset">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">00</span><h2>Réviser, ce n'est pas chercher des fautes</h2></div>
+    <p>Une review qui se contente de pointer des coquilles de style apporte la valeur d'un linter — autrement dit, presque rien, puisque le linter le fait gratuitement. La valeur d'un reviewer est ailleurs : <strong>comprendre l'intention</strong>, <strong>évaluer si le changement résout vraiment le problème</strong>, et <strong>anticiper ce qui cassera dans six mois</strong>.</p>
+    <p>Le réflexe à cultiver : avant de juger le « comment », reconstruire le « pourquoi ». Une PR est une hypothèse — « ce code résout ce besoin sans rien casser ». Votre travail est de tester cette hypothèse, pas de réécrire le code à la place de l'auteur.</p>
+    <div class="callout">
+      <span class="tag">Principe directeur</span>
+      <p>Vous approuvez une intention, une approche et une dette technique — pas seulement des lignes. Demandez-vous toujours : « si ce code me pète à la figure en prod dans trois mois, l'aurais-je vu venir ici ? »</p>
+    </div>
+  </div>
+</section>
+
+<section id="process">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">01</span><h2>Le process, pas-à-pas</h2></div>
+    <p>Un ordre de lecture délibéré évite le piège classique : se noyer dans le premier fichier ouvert et perdre la vue d'ensemble. Procédez du contexte vers le détail.</p>
+
+    <ol class="steps">
+      <li>
+        <h3>Lire la description avant le code</h3>
+        <p>Quel problème ? Quel ticket ? Quelle approche annoncée ? Si la description est vide ou floue, c'est <em>déjà</em> un retour de review à formuler — vous ne pouvez pas valider ce que vous ne comprenez pas.</p>
+        <p class="why">Pourquoi : sans intention claire, chaque ligne devient ambiguë. Vous jugez alors le code contre <em>votre</em> idée du besoin, source n°1 des reviews stériles.</p>
+      </li>
+      <li>
+        <h3>Cadrer la portée et le risque</h3>
+        <p>Combien de fichiers, quelles zones ? Touche-t-on à l'authz, aux migrations, aux paiements, à une API publique ? Un changement de 3 lignes dans la couche d'auth mérite plus d'attention que 300 lignes de tests. Calibrez votre effort sur le risque, pas sur le volume.</p>
+        <p class="why">Pourquoi : l'attention est une ressource finie. La dépenser proportionnellement au blast radius est ce qui sépare une review utile d'une review uniforme et superficielle.</p>
+      </li>
+      <li>
+        <h3>Récupérer la branche et la faire tourner</h3>
+        <p>Pour tout ce qui n'est pas trivial : <code class="ic">gh pr checkout 1234</code>, on lance, on exerce le chemin critique. Lire le diff sur GitHub ne montre que ce qui a changé — pas ce que le changement <em>fait</em> dans le système réel.</p>
+        <p class="why">Pourquoi : beaucoup de bugs ne sont visibles qu'à l'exécution (états, effets de bord, perf). Le diff est une carte, pas le territoire.</p>
+      </li>
+      <li>
+        <h3>Lire le cœur du changement d'abord</h3>
+        <p>Identifiez le ou les 2-3 fichiers qui portent la logique. Comprenez-les en profondeur avant les périphéries (tests, config, renommages). Si le cœur est bon, le reste suit ; s'il est mauvais, inutile de commenter la mise en forme.</p>
+        <p class="why">Pourquoi : commenter les détails d'un design qui va être revu de fond en comble gaspille votre temps et celui de l'auteur.</p>
+      </li>
+      <li>
+        <h3>Vérifier les tests comme une spécification</h3>
+        <p>Les tests décrivent-ils le comportement attendu, y compris les cas limites et d'échec ? Un test qui passe ne prouve rien s'il teste la mauvaise chose. Cherchez ce qui <em>n'est pas</em> testé autant que ce qui l'est.</p>
+        <p class="why">Pourquoi : le test est le filet qui protège les futurs mainteneurs. Sa qualité prédit la durée de vie saine du code mieux que le code lui-même.</p>
+      </li>
+      <li>
+        <h3>Chercher activement ce qui pourrait casser</h3>
+        <p>Adoptez la posture adverse : entrées nulles/vides, concurrence, erreurs réseau, rétrocompatibilité, effets sur les appelants existants. Posez l'hypothèse « ce code est faux » et tentez de la prouver.</p>
+        <p class="why">Pourquoi : confirmer que « ça a l'air bien » est facile et trompeur. Tenter de casser activement est la seule méthode fiable pour trouver les défauts réels.</p>
+      </li>
+      <li>
+        <h3>Synthétiser, prioriser, formuler</h3>
+        <p>Avant d'écrire, classez vos remarques (voir l'échelle ci-dessous). Distinguez clairement ce qui bloque de ce qui est une suggestion. Terminez par un verdict net : approuve / demande des changements / besoin d'en discuter.</p>
+        <p class="why">Pourquoi : un flot de commentaires non hiérarchisés noie le signal critique. L'auteur doit savoir en 10 secondes ce qu'il <em>doit</em> faire.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section id="priorites">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">02</span><h2>L'échelle de priorités</h2></div>
+    <p>Tout commentaire n'a pas le même poids. Étiqueter mentalement (et explicitement) chaque remarque évite que le débat sur l'espacement n'enterre la faille de sécurité.</p>
+    <div class="ladder">
+      <div class="rung"><div class="rank r1">P1</div><div class="rung-body"><h4>Correctness &amp; sécurité</h4><p>Bugs, races, failles, perte de données, régression. Bloquant, toujours.</p></div></div>
+      <div class="rung"><div class="rank r2">P2</div><div class="rung-body"><h4>Design &amp; architecture</h4><p>Mauvaise abstraction, couplage, dette qui se paiera cher. Bloquant si structurant.</p></div></div>
+      <div class="rung"><div class="rank r3">P3</div><div class="rung-body"><h4>Maintenabilité &amp; lisibilité</h4><p>Nommage, complexité, tests manquants. À corriger, rarement bloquant seul.</p></div></div>
+      <div class="rung"><div class="rank r4">P4</div><div class="rung-body"><h4>Suggestions / alternatives</h4><p>« On pourrait aussi… ». Optionnel, marqué <code class="ic">nit:</code> ou <code class="ic">suggestion:</code>.</p></div></div>
+      <div class="rung"><div class="rank r5">P5</div><div class="rung-body"><h4>Style automatisable</h4><p>Formatage, imports. Ne le commentez pas à la main — déléguez à l'outillage.</p></div></div>
+    </div>
+    <div class="callout">
+      <span class="tag">Règle d'or</span>
+      <p>Si une remarque est automatisable (P5), ne la faites jamais à la main : configurez le linter/formatter une bonne fois. Votre cerveau doit servir aux P1 et P2, que <em>seul un humain</em> peut juger.</p>
+    </div>
+  </div>
+</section>
+
+<section id="outils">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Outils &amp; méthodo git/github</h2></div>
+
+    <h3>Récupérer et explorer la PR localement</h3>
+    <pre><span class="c"># Checkout direct de la PR (GitHub CLI)</span>
+gh pr checkout 1234
+
+<span class="c"># Voir le diff de la PR sans quitter le terminal</span>
+gh pr diff 1234
+
+<span class="c"># Statut, checks CI, et conversations</span>
+gh pr view 1234 --comments</pre>
+
+    <h3>Lire le diff intelligemment</h3>
+    <p>Le diff par défaut mélange tout. Quelques options changent la donne :</p>
+    <pre><span class="c"># Ignorer les changements d'espacement (focus sur le vrai changement)</span>
+git diff -w main...HEAD
+
+<span class="c"># Suivre une fonction déplacée au lieu de voir "tout supprimé / tout ajouté"</span>
+git diff --color-moved=zebra
+
+<span class="c"># Diff au niveau mot plutôt que ligne, utile sur du texte dense</span>
+git diff --word-diff
+
+<span class="c"># Comprendre l'historique d'une ligne suspecte : qui, quand, pourquoi</span>
+git log -L :nomFonction:chemin/fichier.js
+git blame -L 40,60 chemin/fichier.js</pre>
+
+    <div class="callout">
+      <span class="tag">Réflexe d'enquêteur</span>
+      <p><code class="ic">git blame</code> + <code class="ic">git log -L</code> répondent à « pourquoi cette ligne existe-t-elle ? ». Avant de demander à un auteur de supprimer quelque chose qui semble inutile, vérifiez s'il ne s'agit pas d'un correctif à un bug oublié.</p>
+    </div>
+
+    <h3>Sur GitHub, dans l'interface</h3>
+    <ul class="checklist">
+      <li>Reviewez par <strong>fichier marqué « viewed »</strong> pour ne pas relire deux fois et garder une progression claire sur les grosses PR.</li>
+      <li>Groupez vos commentaires en une seule <strong>review « Start a review »</strong> plutôt qu'en commentaires isolés : l'auteur reçoit un retour cohérent, pas dix notifications.</li>
+      <li>Utilisez les <strong>suggestions de code</strong> (<code class="ic">```suggestion</code>) pour les corrections triviales : l'auteur les applique en un clic, zéro friction.</li>
+      <li>Exigez un historique propre via <strong>squash merge</strong> ou des commits atomiques : un diff lisible commence par un découpage lisible.</li>
+      <li>Déléguez à la CI tout ce qui est mécanique : lint, format, coverage, tests, scan de sécu. <span class="ax">Vous ne devriez jamais commenter manuellement ce qu'un check automatique peut bloquer.</span></li>
+    </ul>
+
+    <h3>Réduire la charge à la source</h3>
+    <p>La meilleure review est facilitée par une bonne PR. Encouragez, via un <code class="ic">PULL_REQUEST_TEMPLATE.md</code>, une description structurée (contexte, approche, comment tester, risques) et des PR petites et ciblées. <strong>Une PR de 200 lignes reçoit un vrai retour ; une PR de 2000 lignes reçoit un « LGTM ».</strong></p>
+  </div>
+</section>
+
+<section id="cognition">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">04</span><h2>Affûter sa capacité d'analyse</h2></div>
+    <p>La review est un exercice cognitif. Voici comment l'entraîner plutôt que de le subir.</p>
+
+    <h3>Construisez un modèle mental avant de juger</h3>
+    <p>Avant de critiquer, formulez en une phrase ce que le code <em>est censé</em> faire. Si vous n'y arrivez pas, le problème est peut-être votre compréhension — ou la clarté du code. Dans les deux cas, c'est un signal, pas un blocage à votre review.</p>
+
+    <h3>Lisez par hypothèses, pas linéairement</h3>
+    <p>Plutôt que de lire ligne après ligne, posez des questions et cherchez leurs réponses : « comment ce code gère-t-il l'échec ? », « que se passe-t-il si cet appel est concurrent ? ». Vous lisez alors le code comme on interroge un témoin, ce qui mobilise l'attention bien mieux qu'une lecture passive.</p>
+
+    <div class="grid">
+      <div class="card bad">
+        <span class="lbl">Lecture passive</span>
+        <h4>« Je lis tout et je verrai bien »</h4>
+        <p>Attention diffuse, on valide ce qui « semble correct », on rate les défauts subtils car on ne les cherchait pas.</p>
+      </div>
+      <div class="card good">
+        <span class="lbl">Lecture par hypothèses</span>
+        <h4>« Que doit-il prouver, et le prouve-t-il ? »</h4>
+        <p>Attention dirigée, chaque question a une réponse à trouver, les angles morts deviennent visibles.</p>
+      </div>
+    </div>
+
+    <h3>Nommez vos biais de reviewer</h3>
+    <ul class="checklist">
+      <li><strong>Biais de familiarité</strong> : on valide vite le style qui ressemble au nôtre, on sur-critique le style différent mais valide.</li>
+      <li><strong>Biais d'autorité</strong> : « c'est X qui l'a écrit, ça doit être bon » — les seniors écrivent aussi des bugs, parfois plus subtils.</li>
+      <li><strong>Fatigue de fin de diff</strong> : la rigueur chute après le 10ᵉ fichier. Reconnaissez-le et faites une pause plutôt que de tamponner.</li>
+      <li><strong>Ancrage sur le premier détail</strong> : un nom de variable moche en tête de fichier capte l'attention au détriment de la faille 200 lignes plus bas.</li>
+    </ul>
+
+    <div class="callout">
+      <span class="tag">Boucle d'apprentissage</span>
+      <p>Quand un bug atteint la prod malgré une review : revenez à la PR. Qu'auriez-vous pu repérer ? Quelle question n'avez-vous pas posée ? Cette rétro personnelle, faite 4-5 fois, transforme plus votre acuité que n'importe quel article.</p>
+    </div>
+
+    <h3>Travaillez votre lecture « hors review »</h3>
+    <p>Lire régulièrement du bon code que vous n'avez pas écrit — bases open source soignées, PR d'autres équipes — élargit votre répertoire de patterns. Plus vous avez vu de manières de résoudre un problème, plus vite vous repérez celle qui sent mauvais.</p>
+  </div>
+</section>
+
+<section id="communication">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">05</span><h2>Communiquer un retour qui passe</h2></div>
+    <p>Une review techniquement juste mais blessante échoue : le code s'améliore peut-être, mais la relation et la vélocité de l'équipe se dégradent. Le ton fait partie de l'ingénierie.</p>
+
+    <div class="grid">
+      <div class="card bad">
+        <span class="lbl">À éviter</span>
+        <h4>« Pourquoi tu fais ça ? »</h4>
+        <p>Jugement implicite, met sur la défensive, ferme la discussion.</p>
+      </div>
+      <div class="card good">
+        <span class="lbl">À privilégier</span>
+        <h4>« Qu'est-ce qui t'a orienté vers cette approche ? J'aurais tenté X — quel risque je rate ? »</h4>
+        <p>Curiosité, place le code (pas la personne) au centre, ouvre un échange.</p>
+      </div>
+    </div>
+
+    <ul class="checklist">
+      <li>Visez <strong>le code, jamais la personne</strong> : « cette fonction fait deux choses » plutôt que « tu mélanges les responsabilités ».</li>
+      <li><strong>Posez des questions</strong> quand vous n'êtes pas sûr de comprendre : souvent l'auteur a une raison que vous ignorez.</li>
+      <li><strong>Étiquetez l'intensité</strong> : <code class="ic">blocking:</code>, <code class="ic">suggestion:</code>, <code class="ic">nit:</code>, <code class="ic">question:</code>. L'auteur sait quoi prioriser.</li>
+      <li><strong>Justifiez le « pourquoi »</strong> d'une demande : un retour qui explique le risque enseigne ; un ordre sec ne fait qu'agacer.</li>
+      <li><strong>Soulignez aussi le bon</strong> : un design élégant mérite un commentaire. C'est honnête, et ça calibre l'équipe sur ce qui est valorisé.</li>
+      <li>Pour un désaccord qui s'enlise par écrit, <strong>passez en synchrone</strong> (appel, pairing) et résumez la décision dans la PR ensuite.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="checklist">
+  <div class="wrap">
+    <div class="sec-head"><span class="sec-num">06</span><h2>La checklist de référence</h2></div>
+    <p>À garder en tête (pas à dérouler mécaniquement — c'est un aide-mémoire, pas un formulaire).</p>
+
+    <h3>Correctness</h3>
+    <ul class="checklist">
+      <li>Le code résout-il bien le problème décrit, et seulement celui-là ?</li>
+      <li>Cas limites gérés : null/vide, débordement, concurrence, erreurs réseau ?</li>
+      <li>Régression possible sur les appelants existants ou l'API publique ?</li>
+    </ul>
+    <h3>Sécurité &amp; données</h3>
+    <ul class="checklist">
+      <li>Entrées utilisateur validées et échappées (injection, XSS) ?</li>
+      <li>Authz vérifiée au bon endroit, secrets hors du code ?</li>
+      <li>Migrations réversibles, pas de risque de perte de données ?</li>
+    </ul>
+    <h3>Design</h3>
+    <ul class="checklist">
+      <li>L'abstraction est-elle juste, ni sur- ni sous-conçue ?</li>
+      <li>Le changement crée-t-il une dette qui coûtera cher à rembourser ?</li>
+    </ul>
+    <h3>Tests &amp; maintenabilité</h3>
+    <ul class="checklist">
+      <li>Les tests couvrent-ils le comportement, échecs inclus ? Que manque-t-il ?</li>
+      <li>Un nouvel arrivant comprendra-t-il ce code dans six mois sans contexte ?</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="rule"></div>
+    <p class="mono">Réviser le code des autres aussi attentivement que le sien —<br>c'est là que se gagne (ou se perd) la qualité d'une base de code.</p>
+  </div>
+</footer>
+
+</body>
+</html>
